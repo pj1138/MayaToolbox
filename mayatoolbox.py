@@ -19,7 +19,7 @@ def ch(target=None):
         mc.delete(ch=True)
 
 #select
-def s(_t=None,d=False,all=False):
+def s(_t=None, d=False, all=False):
     if(d==True):
         py.select(d=True)
     elif(all==True):
@@ -34,6 +34,10 @@ def s(_t=None,d=False,all=False):
         else:
             py.select(_t)
             return _t
+
+def ss(_t=None, d=False, all=False):
+    return s(_t, d, all)[0]
+
 #time
 def t(_t=None):
     try:
@@ -98,6 +102,36 @@ def listAll(target=None):
     print allJoints
     return allJoints
 
+def listAllCurves():
+    return mc.ls(type="nurbsCurve", long=True, allPaths=True)
+
+def getCurveCvs(target=None):
+    points = []
+    if not target:
+        target = ss()
+    cvs = mc.getAttr(target + ".cp",s=1)
+    try:
+        if(len(cvs) > 1):
+            cvs = int(cvs[0])
+    except:
+        pass
+    print(cvs)
+    for i in range(0, cvs):
+        point = py.getAttr(target + ".cv[" + str(i) + "]")
+        points.append(point)
+    return points
+
+def getAllCurveCvs():
+    strokes = []
+    curves = listAllCurves()
+    for curve in curves:
+        try:
+            points = getCurveCvs(curve)
+            strokes.append(points)
+        except:
+            pass
+    return strokes
+
 def posAll(target=None):
     pos = []
     
@@ -150,14 +184,28 @@ def moveTo(target=None):
 #toggle visibility
 def showHide(target=None):
     if not target:
-       target = mc.ls(sl=1)
+       target = s()
 
     for i in range(0,len(target)):
         visible = mc.getAttr(target[i] + ".v")
         if(visible==False):
-           mc.setAttr(target[i] + ".v",1)
+           mc.setAttr(target[i] + ".v", 1)
         if(visible==True):
-           mc.setAttr(target[i] + ".v",0) 
+           mc.setAttr(target[i] + ".v", 0)
+
+'''
+def show(target=None):
+    if not target:
+        target = s()
+    for i in range(0, len(target)):
+        mc.setAttr(target[i] + ".v", 1)
+
+def hide(target=None):
+    if not target:
+        target = s()
+    for i in range(0, len(target)):
+        mc.setAttr(target[i] + ".v", 0)
+'''
 
 #toggle selectability
 def toggleSelectable(target=None):
@@ -171,6 +219,21 @@ def toggleSelectable(target=None):
             mc.setAttr(target[i] + ".overrideEnabled",1)
             mc.setAttr(target[i] + ".overrideDisplayType",2)
 
+def getAllObjects():
+    s(all=True)
+    target = s()
+    s(d=True)
+    return target
+
+def getNewObjects(oldObjects):
+    newObjects = getAllObjects()
+    finalList = newObjects
+    for i, newObj in enumerate(newObjects):
+        for oldObj in oldObjects:
+            if (newObj == oldObj):
+                finalList = [x for x in finalList if x != oldObj]
+    return finalList
+    
 #reset transformations to 0
 def freezeTransformations(target=None):
     if not target:
@@ -254,6 +317,17 @@ def instanceFirst(doShaders=False):
             mc.delete(target[i])
 
 #~~
+
+# http://download.autodesk.com/us/maya/2009help/CommandsPython/fileDialog.html
+# http://download.autodesk.com/us/maya/2011help/CommandsPython/fileDialog2.html
+
+def openFileDialog(fileFilter="*"):
+    returns = py.fileDialog2(fileFilter="*." + fileFilter, dialogStyle=1, fileMode=1)
+    return str(returns[0])
+
+def saveFileDialog(fileFilter="*"):
+    returns = py.fileDialog2(fileFilter="*." + fileFilter, dialogStyle=1, fileMode=0)
+    return str(returns[0])
 
 def duplicateFirst(doShaders=False):
     #1. make an array of all selected objects
@@ -402,15 +476,29 @@ def tryGetAngle():
 
 #~~
 
-def inTime():
-    returns = int(mc.playbackOptions(q=True, animationStartTime=True))
-    #returns = int(findKeyframe(which='first'))
-    return returns
+def inTime(newTime=None):
+    if newTime != None and newTime != 0:
+        mc.playbackOptions(minTime=newTime, animationStartTime=newTime)
+    elif newTime != None and newTime ==0:
+        mc.playbackOptions(minTime=newTime, animationStartTime=newTime)
+    return int(mc.playbackOptions(q=True, animationStartTime=True))
 
-def outTime():
-    returns = int(mc.playbackOptions(q=True, animationEndTime=True))+2
-    #returns = int(findKeyframe(which='last'))+2
-    return returns
+def outTime(newTime=None):
+    if newTime != None and newTime != 0:
+        mc.playbackOptions(maxTime=newTime, animationEndTime=newTime)
+    elif newTime != None and newTime ==0:
+        mc.playbackOptions(maxTime=newTime, animationEndTime=newTime)
+    #return int(mc.playbackOptions(q=True, animationEndTime=True)) + 2
+    return int(mc.playbackOptions(q=True, animationEndTime=True))
+
+def getStartEnd():
+    #return inTime(), outTime()
+    return inTime(), outTime() + 1
+
+def checkStartEnd():
+    start, end = getStartEnd()
+    for i in range(start, end):
+        print(str(i))
 
 def bakeKeys(target=None, iT=inTime(), oT=outTime()):
     if not target:
@@ -586,3 +674,11 @@ def unparent(target = None):
     if not target:
         target = s()
     py.parent(target, world=True)
+
+def roundVal(a, b):
+    formatter = "{0:." + str(b) + "f}"
+    return formatter.format(a)
+
+def roundValInt(a):
+    formatter = "{0:." + str(0) + "f}"
+    return int(formatter.format(a))
